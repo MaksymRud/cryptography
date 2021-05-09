@@ -1,0 +1,12 @@
+[
+{
+  "directory": "D:/Code/python/Lab1Cript/Lab2/build/fast",
+  "command": "C:\\msys64\\mingw64\\bin\\g++.exe -Dfast_EXPORTS @CMakeFiles/fast.dir/includes_CXX.rsp -g -std=gnu++2a -o CMakeFiles\\fast.dir\\src\\fast.cpp.obj -c D:\\Code\\python\\Lab1Cript\\Lab2\\FastCLib\\fast\\src\\fast.cpp",
+  "file": "D:/Code/python/Lab1Cript/Lab2/FastCLib/fast/src/fast.cpp"
+},
+{
+  "directory": "D:/Code/python/Lab1Cript/Lab2/build/apps",
+  "command": "C:\\msys64\\mingw64\\bin\\g++.exe  @CMakeFiles/main.dir/includes_CXX.rsp -g -std=gnu++2a -o CMakeFiles\\main.dir\\main.cpp.obj -c D:\\Code\\python\\Lab1Cript\\Lab2\\FastCLib\\apps\\main.cpp",
+  "file": "D:/Code/python/Lab1Cript/Lab2/FastCLib/apps/main.cpp"
+}
+]

@@ -1,207 +1,300 @@
-from time import sleep
-
-from apa import apa
-from math import gcd, ceil, sqrt
-import random
-
-li = []
+import time
+from apa import LongA
+from math import gcd, ceil, sqrt, floor
+from random import randint, randrange
 
 
-def pollards_rho(n_):
-    global li
-    x = random.randint(2, n_ - 2)
-    y = 1
-    i = 0
-    stage = 2
-    while gcd(n_, abs(x - y)) == 1:
-        if i == stage:
-            y = x
-            stage = stage * 2
-        x = (x * x - 1) % n_
-        i = i + 1
-    p = gcd(n_, abs(x - y))
-    # li.append(p)
-    # return
-    if p == 1:
-        li.append(int(n_ / p))
-        return
-    if int(n_ / p) == 1:
-        li.append(p)
-        return
-    if p > 3:
-        pollards_rho(p)
-    elif p <= 3:
-        li.append(p)
-    q = apa(n_)
-    w = apa(p)
-    d = q / w
-    d = int(d[0])
-    if d > 3:
-        pollards_rho(d)
-    elif d <= 3:
-        li.append(d)
+class RSA:
+    def __init__(self, num_bits):
+        self.input_message = str()
+        self.num_bits = num_bits
+        self.prime1 = 0
+        self.prime2 = 0
+        self.modul = 0
+        self.public_keys = tuple()
+        self.private_keys = tuple()
+
+    def __genprime(self, k):
+        x = ""
+        k = int(k)
+        for y in range(k):
+            x = x + "1"
+        y = "1"
+        for z in range(k-1):
+            y = y + "0"
+        x = int(x,2)
+        y = int(y,2)
+        p = 0
+        while True:
+            p = randrange(y,x)
+            if self.__rabin_miller(p):
+                break
+        return p
+
+    def gen_private_keys(self):
+        gdc, x, d = self.__gcdExtended(self.public_keys[0], self.public_keys[1])
+        self.private_keys = (self.public_keys[0], d)
+
+    def get_public_keys(self):
+        e = 65537
+        while True:
+            self.prime1 = self.__genprime(self.num_bits//2)
+            if self.prime1 % e != 1:
+                break
+        
+        while True:
+            self.prime2 = self.__genprime(self.num_bits//2)
+            if self.prime2 % e != 1:
+                break
+
+        N = self.prime1*self.prime2
+    
+        lam = self.__carmichael(int(N))
+
+        if gcd(e, lam) == 1:
+            self.public_keys = (N, e)
+        else:   
+            e_test = 0
+            while True:
+                e_test = randint(2, lam)
+                if e_test % 2 == 0:
+                    continue
+                else:
+                    if self.__rabin_miller(e_test):
+                        if gcd(e_test, lam) == 1:
+                            break   
+        
+            e = e_test
+        self.public_keys = (N, e)
+
+    def __gcdExtended(self, a, b): 
+        if a == 0 :  
+            return b,0,1
+                
+        gcd, x1, y1 = self.__gcdExtended(b%a, a) 
+    
+        x = y1 - (b//a) * x1 
+        y = x1 
+        
+        return gcd, x, y
+
+    def __rabin_miller(self, p):
+        if(p < 2):
+            return False
+        if p != 2 and p % 2 == 0:
+            return False
+        s = p - 1
+        t = 0
+        while(s % 2 == 0):
+            s >>= 1
+            t += 1
+
+        for i in range(20):
+            a = randint(2, p - 2)
+            #a_temp = int(a)
+            #s_temp = int(s)
+            #p_temp = int(p)
+            #b = LongA.to_number(pow(a_temp, s_temp, p_temp))
+            b = pow(a, s, p)
+            if b == 1 or b == p - 1:
+                continue
+            for i in range(t):
+                b = (b * b) % p
+
+                if b == 1:
+                    return False
+                if b == p - 1:
+                    break
+
+        return True
+
+    def __carmichael(self, n: int):
+        n=int(n)
+        k=2
+        a=1
+        alist=[]
+
+        while not ((gcd(a,n))==1):
+            a=a+1
+
+        while ((gcd(a,n))==1) & (a<=n) :
+            alist.append(a)
+            a=a+1
+            while not ((gcd(a,n))==1):
+                a=a+1
+
+        timer=len(alist)
+        while timer>=0:
+            for a in alist:
+                if (a**k)%n==1:
+                    timer=timer-1
+                    if timer <0:
+                        break
+                    pass
+                else:
+                    timer=len(alist)
+                    k=k+1
+        return k
+
+    def encode(self, message: str):
+        words = message.split()
+        encrypted = []
+        for word in words:
+            encrypted_word = []
+            for c in word:
+                c_ascii = ord(c)
+                c_cypher = pow(c_ascii, self.public_keys[0], self.public_keys[1])
+                encrypted_word.append(c_cypher)
+            encrypted.append(encrypted_word)
+
+        return encrypted
 
 
-def bsgs(g, h, p):
-    n = ceil(sqrt(p - 1))
+    def decode(self, message):
+        decoded_message = ""
+        for word in message:
+            decoded_word = ""
+            for cypher in word:
+                m = pow(cypher, self.private_keys[1], self.private_keys[0])
+                m = chr(m)
+                decoded_word = decoded_word + m
+            decoded_message = decoded_message + decoded_word
+        return decoded_message
 
-    tbl = {str(pow(g, i, p)): i for i in range(1, n)}
+class Bob:
+    def __init__(self, message, public_keys = None):
+        self.message = message
+        self.public_keys = public_keys
+        self.RSA = RSA(10)
+        self.RSA.input_message = self.message
+    
+    def code_messages(self):
+        self.RSA.public_keys = self.public_keys
+        self.message = self.RSA.encode(self.message)
+    
+class Alice:
+    def __init__(self):
+        self.message = None
+        self.public_keys = list()
+        self.private_keys = list()
+        self.RSA = RSA(10)
 
-    c = pow(g, (p - 2) * n, p)
+    def create_keys(self):
+        self.RSA.get_public_keys()
+        self.public_keys = self.RSA.public_keys
+    
+    def decode_message(self):
+        self.RSA.input_message = self.message
+        self.RSA.gen_private_keys()
+        self.private_keys = self.RSA.private_keys
+        print(f"Pricate keys: {self.private_keys}")
+        self.message = self.RSA.decode(self.message)
+        
+"""
+def rabin_miller(p):
+    if(p < 2):
+        return False
+    if p != 2 and p % 2 == 0:
+        return False
+    s = p - 1
+    t = 0
+    while(s % 2 == 0):
+        s >>= 1
+        t += 1
 
-    for j in range(1, n):
-        d = h * pow(c, j, p)
-        y = d % p
-        if str(y) in tbl:
-            return tbl[str(y)] + n * j
+    for i in range(20):
+        a = randint(2, p - 2)
+        a_temp = int(a)
+        s_temp = int(s)
+        p_temp = int(p)
+        b = LongA.to_number(pow(a_temp, s_temp, p_temp))
+        #b = LongA.pow(a, s, p)
+        if b == 1 or b == p - 1:
+            continue
+        for i in range(t):
+            b = (b * b) % p
 
-    return None
+            if b == 1:
+                return False
+            if b == p - 1:
+                break
 
+    return True
+"""
+def miller_rabin(n):
 
-def EulerPhi(a):
-    global li
-    li = []
-    pollards_rho(a)
-    s = a
-    k = []
-    for d in li:
-        if d not in k:
-            s *= (1 - 1 / d)
-            k.append(d)
-    return s
+    if n == 2 or n == 3:
+        return True
 
-
-def mobius(n):
-    global li
-    li = []
-    pollards_rho(n)
-    for x in li:
-        if li.count(x) > 1:
-            return 0
-    if len(li) % 2 == 0:
-        return 1
-    else:
-        return -1
-
-
-def Legendre(a: int, p: int):
-    if a == 0:
-        return 0
-    if a == 1:
-        return 1
-    if a % 2 == 0:
-        result = Legendre(a // 2, p)
-        if not (p * p - 1) & 8 == 0:
-            result = -result
-    else:
-        result = Legendre(p % a, a)
-        if ((a - 1) * (p - 1) & 4) != 0:
-            result = -result
-    return result
-
-
-def calculateJacobi(a, p):
-    s = 1
-    pollards_rho(p)
-    for d in li:
-        s *= Legendre(a, d)
-    return s
-
-
-def cipolla(n, p):
-    global li
-    while True:
-        a = random.randint(1, p - 1)
-        l = Legendre((a ** 2 - n), p)
-        if l == -1:
-            break
-
-    def bits(n_):
-        while n_:
-            yield n_ & 1
-            n_ >>= 1
-
-    def cipollaMult(a, b, c, d, w, p):
-        return (a * c + b * d * w) % p, (a * d + b * c) % p
-
-    x1 = (a, 1)
-    x2 = cipollaMult(x1[0], x1[1], x1[0], x1[1], a * a - n, p)
-    for i in bits(int((p + 1) / 2)):
-        if i == 0:
-            x2 = cipollaMult(x2[0], x2[1], x1[0], x1[1], a * a - n, p)
-            x1 = cipollaMult(x1[0], x1[1], x1[0], x1[1], a * a - n, p)
-        else:
-            x1 = cipollaMult(x1[0], x1[1], x2[0], x2[1], a * a - n, p)
-            x2 = cipollaMult(x2[0], x2[1], x2[0], x2[1], a * a - n, p)
-    # if x1[0] ** 2 % p == n:
-    return x1[0], -x1[0] % p
-    # else:
-    #     return cipolla(n, p)
-
-
-def miller_rabin(n, k=10):
     if n % 2 == 0:
         return False
 
-    s = 0
-    t = n - 1
-    while t % 2 == 0:
-        t = t // 2
-        s += 1
-
-    for i in range(k):
-        a = random.randint(2, n - 1)
-        x = pow(a, t, n)
+    r = 0
+    s = n - 1
+    while s % 2 == 0:
+        r += 1
+        s //= 2
+    for _ in range(10):
+        a = randrange(2, n - 1)
+        a_temp = int(a)
+        s_temp = int(s)
+        p_temp = int(n)
+        x = LongA.to_number(pow(a_temp, s_temp, p_temp))
+        #x = pow(a, s, n)
         if x == 1 or x == n - 1:
             continue
-        ok = False
-        for j in range(s - 1):
-            x = x ** 2 % n
-            if x == 1:
-                return False
+        for _ in range(r - 1):
+            a_temp = int(x)
+            s_temp = int(s)
+            p_temp = int(n)
+            x = LongA.to_number(pow(a_temp, 2, p_temp))
+            #x = pow(x, 2, n)
             if x == n - 1:
-                ok = True
                 break
-        if ok:
-            continue
         else:
             return False
     return True
 
 
-def elgamel(m, p, g):
-    x = random.randint(2, p - 1)
-    y = pow(g, x, p)
-    k = pow(2, p - 2)
-    a = pow(g, k, p)
-    b = pow(y, k) * m % p
-    return a, b, x
+def genprimeBits(k):
+    x = ""
+    k = int(k)
+    for y in range(k):
+        x = x + "1"
+    y = "1"
+    for z in range(k-1):
+        y = y + "0"
+    x = int(x,2)
+    y = int(y,2)
+    p = 0
+    while True:
+        p = randrange(y,x)
+        p = LongA(str(p))
+        if miller_rabin(p):
+            break
+    return p
+            
 
+#inp = input("Long number: ")
+#inp = LongA(inp)
+#print(f"is prime: {rabin_miller(inp)}")
+#print(f"is prime: {miller_rabin(inp)}")
+#inp = input("Number of bits: ")
+#inp = LongA(inp)
+#ans = genprimeBits(inp)
+#print(f"rand prime number with {inp} bits: {ans}")
+#print(f"ans as binary {ans.as_binary()}")
+#print(f"ans as base64 {ans.as_base64()}")
+#print(f"ans as bytes object {ans.as_bytes()}")
 
-def decode_elgamel(a, b, x, p):
-    m = b * pow(a, p - 1 - x) % p
-    return m
-
-
-# pollards_rho(17348256187264213649126346457)
-# print(li)
-
-# print(bsgs(3, 1, 196134577))
-#
-# print(pow(3, 24516822, 196134577))
-
-# print(int(EulerPhi(9)))
-
-# print(mobius(10))
-
-# print(calculateJacobi(7, 15))
-
-# print(cipolla(10, 13))
-
-# print(Legendre(30, 97))
-
-# print(miller_rabin(18446744082299486207, k=10))
-
-# a_, b_, x_ = elgamel(5, 11, 2)
-# print(a_, b_, x_)
-# print(decode_elgamel(a_, b_, x_, 11))
+MESSAGE:str = "HELLO"
+Bob = Bob(MESSAGE)
+Alice = Alice()
+Alice.create_keys()
+print(f"Public keys {Alice.public_keys}")
+Bob.public_keys = Alice.public_keys
+Bob.code_messages()
+print(f"{MESSAGE} is now Encoded message {Bob.message}")
+Alice.message = Bob.message
+Alice.decode_message()
+print(f"massage decoded by Alice: {Alice.message}")

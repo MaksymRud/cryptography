@@ -1,9 +1,37 @@
 import math
+from base64 import b64encode
+from ctypes import *
+import ctypes.util
+import os
+import platform
 
+#DLL_NAME: str
+
+#if platform.system() == 'Darwin':
+#    DLL_NAME = 'libfast.dylib'
+#elif platform.system() == 'Linux':
+#    DLL_NAME = 'libfast.so'
+#elif platform.system() == 'Windows':
+#    DLL_NAME = 'libfast.dll'
+#else:
+#    raise SystemError("Unsupported platform", platform.system())
+
+#os.add_dll_directory("D:\Code\python\Lab1Cript\Lab2")
+#DLL_FULLNAME = ctypes.util.find_library('libfast')
+#DLL_FULLNAME = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + DLL_NAME
+#fast_lib = ctypes.cdll.LoadLibrary(DLL_FULLNAME)
+#fast_lib = ctypes.cdll.LoadLibrary("D:\\Code\\python\\Lab1Cript\\Lab2\\build\\fast\\" + DLL_NAME)
+#fast_lib.str_wrapper.restype = c_char_p
+#fast_lib.str_wrapper.argtypes = [c_char_p, c_char_p,]
+
+#fast_lib.mul.restype = c_ulonglong
+#fast_lib.mul.argtypes = [POINTER(c_ulong), POINTER(c_ulong), ]
+
+#fast_lib.powint.restype = c_ulonglong
+#fast_lib.powint.argtypes = [POINTER(c_int), POINTER(c_int), ]
 
 class Number:
-    def __init__(self, value):
-        value = str(value)
+    def __init__(self, value: str):
         self.value = value
 
     @property
@@ -63,6 +91,11 @@ class Number:
             n.change_sign()
         return n
 
+    def __floordiv__(self, other):
+        other = Number.to_number(other) 
+        a, b = self.__truediv__(other)
+        return a
+
     def __truediv__(self, other):
         other = Number.to_number(other)
         if self.sign == '+' and other.sign == '+':
@@ -86,6 +119,24 @@ class Number:
     def __pow__(self, power, modulo=None):
         power = Number.to_number(power)
         return self._pow(power)
+
+    def __and__(self, other):
+        #other = Number.to_number(other)
+        if isinstance(other, int):
+            return int(self) & other
+        elif isinstance(other, Number):
+            return int(self) & other
+        else:
+            raise TypeError
+
+    def __rshift__(self, other):
+        #other = Number.to_number()
+        if isinstance(other, int):
+            return int(self) >> other
+        elif isinstance(other, Number):
+            return int(self) >> other
+        else:
+            raise TypeError
 
     def _add(self, other):
         rez = []
@@ -161,26 +212,59 @@ class Number:
         return n
 
     def _mul(self, other):
-        if len(self.digit) > len(other.digit):
-            smaller = other
-            bigger = self
+        #if int(self).bit_length() <= 10 and int(other).bit_length() <= 10:
+        #    int_self = c_ulong(int(self))
+        #    int_other = c_ulong(int(other))
+        #    print("mul res: ", fast_lib.mul(byref(int_self), byref(int_other)))
+        #    n = Number.to_number(fast_lib.mul(int_self, int_other))
+        #else:
+        #self_str: str = Number.to_string(self)
+        #other_str: str =  Number.to_string(other)
+
+        #self_bytes = self_str.encode('utf-8')
+        #other_bytes = other_str.encode('utf-8')
+        #self_bytes: bytes = self_str.encode('utf-8')
+        #other_bytes: bytes = other_str.encode('utf-8')
+        #mul_res = fast_lib.str_wrapper(self_bytes, other_bytes)
+        #mul_res = mul_res.decode('utf-8')
+        #n = Number.to_number(mul_res)
+        n = Number.to_number(self.karatsuba_rec(int(self), int(other)))
+        if self.sign == '-' and other.sign == '+':
+            n.change_sign()
+        elif self.sign == '+' and other.sign == '-':
+            n.change_sign()
         else:
-            smaller = self
-            bigger = other
-        number = Number('0')
-        for i in range(len(smaller) - 1, -1, -1):
-            n = ''
-            d = 0
-            for j in range(len(bigger) - 1, -1, -1):
-                n = str((smaller[i] * bigger[j] + d) % 10) + n
-                d = (smaller[i] * bigger[j] + d) // 10
-            if not d == 0:
-                n = str(d) + n
-            number += Number(n + '0' * (len(smaller) - i - 1))
-        return number
+            return n
+        return n
+
+
+    def karatsuba_rec(self, x, y):
+        """Function to multiply 2 numbers in a more efficient manner than the grade school algorithm"""
+        if x < 10 and y < 10:
+            return x * y
+
+        num1_len = len(str(x))
+        num2_len = len(str(y))
+
+        n = max(num1_len,num2_len)
+
+        
+        nby2 = round(n/2)
+
+        num1 = x // (10 ** nby2)
+        rem1 = x % (10 ** nby2)
+
+        num2 = y // (10 ** nby2)
+        rem2 = y % (10 ** nby2)
+
+        ac = self.karatsuba_rec(num1, num2)
+        bd = self.karatsuba_rec(rem1, rem2)
+        ad_plus_bc = self.karatsuba_rec(num1 + rem1, num2 + rem2) - ac - bd
+
+        return (10 ** (2*nby2))*ac + (10 ** nby2)*ad_plus_bc + bd
 
     def _div(self, other):
-        other = Number(other)
+        other = Number.to_number(other)
         if other == 0:
             return ValueError('You can\'t dive on 0')
         if self == 0:
@@ -211,22 +295,22 @@ class Number:
         return Number(ans), a_n
 
     def _pow(self, b):
+        #return Number.to_number(pow(int(self), int(b)))
+        #if int(self).bit_length() <= 14 or int(b).bit_length() <= 14:
+        #    int_self = c_int(int(self))
+        #    int_other = c_int(int(b))
+        #    result = fast_lib.powint(byref(int_self), byref(int_other))
+        #    result = int(result) 
+        #    return Number.to_number(result) 
         if b == 0:
             return 1
-
-        r = 1
-        num = Number(str(self))
-
-        def bits(n):
-            while n:
-                yield n & 1
-                n >>= 1
-
-        for bit in bits(int(b)):
-            if bit == 1:
-                r = num * r
-            num = num * num
-        return r
+        elif b % 2 == 1:
+            return self * self._pow(b - 1)
+        else:
+            n, m = b / 2
+            a = self._pow(n)
+            return a * a
+        
 
     def __lt__(self, other):
         """
@@ -340,12 +424,11 @@ class Number:
     @staticmethod
     def pow(first, second, mode=None):
         first = Number.to_number(first)
-        second = Number.to_number(second)
         if mode is None:
             return first.__pow__(second)
         mode = Number.to_number(mode)
         p = first.__pow__(second)
-        return Number.to_number(p).__mod__(mode)
+        return p.__mod__(mode)
 
     def change_sign(self):
         if self.sign == '-':
@@ -371,6 +454,11 @@ class Number:
 
     @staticmethod
     def to_number(value):
+        """
+        method for converting object to Number
+        :value: number like object
+        :return: Number
+        """
         if isinstance(value, str):
             return Number(value=value)
         if isinstance(value, int):
@@ -392,6 +480,21 @@ class Number:
             s += str(digit)
         return s
 
+    def as_binary(self):
+        num = int(self)
+        return bin(num)
+    
+    def as_hex(self):
+        num = int(self)
+        return hex(num)
+
+    def as_bytes(self):
+        #return bytes([int(self)])
+        return self.value.encode('ascii')
+    
+    def as_base64(self):
+        return b64encode(self.as_bytes())
+
     @staticmethod
     def remove_leading_zeros(number):
         k = 0
@@ -407,36 +510,57 @@ class Number:
             number.s = str(number.digit[0])
             a = 1
 
+    
     @staticmethod
-    def solve(m: list, b: list):
-        m_, b_ = [], []
-        for i in range(len(m)):
-            m_.append(Number.to_number(m[i]))
-            b_.append(Number.to_number(b[i]))
-        m, b = m_, b_
-        M = Number('1')
-        for x in m:
-            M *= x
-        m_list = []
-        for x in m:
-            n, m_ = M / x
-            m_list.append(n)
-        n = []
-        for i in range(len(m)):
-            a = m_list[i]
-            b_ = Number('1')
-            m_ = m[i]
-            c, k = a / m_
-            a -= c * m_
-            x = b_ * a ** (Number.phi(int(str(m_))) - 1)
-            c, k = x / m_
-            n.append(k)
-        s = Number('0')
-        for i in range(len(m)):
-            ss = b[i] * n[i] * m_list[i]
-            s += ss
-        n, m_ = s / M
-        return m_
+    def solve(b: list, p: list, k: str):
+        k:int = int(k)
+        b = [int(x) for x in b]
+        p = [int(x) for x in p]
+        
+        def _inv(a, m):
+            m0 = m 
+            x0 = 0
+            x1 = 1
+        
+            if (m == 1) : 
+                return 0
+        
+            while (a > 1) : 
+    
+                q = a // m 
+        
+                t = m 
+        
+                m = a % m 
+                a = t 
+        
+                t = x0 
+        
+                x0 = x1 - q * x0 
+        
+                x1 = t 
+        
+            if (x1 < 0) : 
+                x1 = x1 + m0 
+        
+            return x1
+
+        prod = 1
+        for i in range(0, k): 
+            prod = prod * p[i] 
+    
+        result = 0
+
+        for i in range(0,k): 
+            pp = prod // p[i] 
+            result = result + b[i] * _inv(pp, p[i]) * pp 
+      
+      
+        return result % prod 
+
+    @staticmethod
+    def solve_eq(b, p, k):
+        return 
 
     @staticmethod
     def phi(n):
@@ -446,11 +570,8 @@ class Number:
                 amount += 1
         return amount
 
-    def __int__(self):
+    def __int__(self): 
         return int(self.value)
-
-    def __float__(self):
-        return float(self.value)
 
     def __mod__(self, other):
         other = Number.to_number(other)

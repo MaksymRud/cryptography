@@ -1,0 +1,8 @@
+D:/Code/python/Lab1Cript/Lab2/build/CMakeFiles/rebuild_cache.dir
+D:/Code/python/Lab1Cript/Lab2/build/CMakeFiles/edit_cache.dir
+D:/Code/python/Lab1Cript/Lab2/build/fast/CMakeFiles/rebuild_cache.dir
+D:/Code/python/Lab1Cript/Lab2/build/fast/CMakeFiles/edit_cache.dir
+D:/Code/python/Lab1Cript/Lab2/build/fast/CMakeFiles/fast.dir
+D:/Code/python/Lab1Cript/Lab2/build/apps/CMakeFiles/rebuild_cache.dir
+D:/Code/python/Lab1Cript/Lab2/build/apps/CMakeFiles/edit_cache.dir
+D:/Code/python/Lab1Cript/Lab2/build/apps/CMakeFiles/main.dir

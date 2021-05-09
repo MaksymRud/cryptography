@@ -1,1 +1,1 @@
-from apa.number import Number as apa
+from apa.number import Number as LongA
